@@ -1,0 +1,14 @@
+#!/bin/bash
+
+command -v go > /dev/null || {
+  echo "Please install Go. If you're using a Mac, we recommend running 'brew install go'."
+  exit 1
+}
+
+command -v dep > /dev/null || {
+  echo "Please install dep. If you're using a Mac, we recommend running 'brew install dep'."
+  exit 1
+}
+
+go version
+dep ensure
