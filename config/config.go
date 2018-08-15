@@ -1,76 +1,54 @@
-// package config
+// Package config provides methods for fetching and storing configuration.
 package config
 
 import (
-	"encoding/json"
 	"io/ioutil"
-	"os"
-	"os/user"
-	"path/filepath"
 
+	"github.com/pkg/errors"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	calendar "google.golang.org/api/calendar/v3"
 )
 
+var (
+	// ErrNoGoogleClientConfig indicates that the client configuration is missing.
+	ErrNoGoogleClientConfig = errors.New("missing google client config")
+	// ErrNoGoogleToken indicatges that the token is missing.
+	ErrNoGoogleToken = errors.New("missing google token")
+)
+
 // Provider is a token provider.
 type Provider interface {
-	// GetGoogleClientConfig returns the Google client config.
-	GetGoogleClientConfig() (*oauth2.Config, error)
+	// GoogleClientConfig returns the Google client config.
+	GoogleClientConfig() (*oauth2.Config, error)
 
-	// GetGoogleToken returns the Google token.
-	GetGoogleToken() (*oauth2.Token, error)
+	// StoreGoogleClientConfig writes the Google client config.
+	StoreGoogleClientConfig(*oauth2.Config) error
 
-	// SaveGoogleToken writes the Google token.
-	SaveGoogleToken(token *oauth2.Token) error
+	// GoogleClientConfigExists returns true if the client config is readable, false otherwise.
+	GoogleClientConfigExists() bool
+
+	// GoogleToken returns the Google token.
+	GoogleToken() (*oauth2.Token, error)
+
+	// StoreGoogleToken writes the Google token.
+	StoreGoogleToken(*oauth2.Token) error
+
+	// GoogleTokenExists returns true if the token is readable, false otherwise.
+	GoogleTokenExists() bool
 }
 
-// FileProvider is a Provider which uses files to store data.
-type FileProvider struct {
-	directory string
-}
-
-// NewFileProvider returns a new FileProvider with the default filepath.
-func NewFileProvider() (FileProvider, error) {
-	usr, err := user.Current()
+// ReadGoogleClientConfigFromFile reads the content of a file and parses it as an *oauth2.Config
+func ReadGoogleClientConfigFromFile(filepath string) (*oauth2.Config, error) {
+	b, err := ioutil.ReadFile(filepath)
 	if err != nil {
-		return FileProvider{}, err
-	}
-
-	return FileProvider{
-		directory: filepath.Join(usr.HomeDir, ".config", "google"),
-	}, nil
-}
-
-// GetGoogleClientConfig returns the Google client configuration from the configuration file.
-func (f FileProvider) GetGoogleClientConfig() (*oauth2.Config, error) {
-	b, err := ioutil.ReadFile(filepath.Join(f.directory, "client_secrets.json"))
-	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	// If modifying these scopes, delete your previously saved client_secret.json.
-	return google.ConfigFromJSON(b, calendar.CalendarReadonlyScope)
-}
-
-// GetGoogleToken fetches the Google token from the configuration file.
-func (f FileProvider) GetGoogleToken() (*oauth2.Token, error) {
-	token := &oauth2.Token{}
-
-	fd, err := os.Open(filepath.Join(f.directory, "token.json"))
+	conf, err := google.ConfigFromJSON(b, calendar.CalendarReadonlyScope)
 	if err != nil {
-		return token, err
+		return nil, errors.WithStack(err)
 	}
-
-	return token, json.NewDecoder(fd).Decode(token)
-}
-
-// SaveGoogleToken writes the Google token to the configuration file.
-func (f FileProvider) SaveGoogleToken(token *oauth2.Token) error {
-	fd, err := os.Create(filepath.Join(f.directory, "token.json"))
-	if err != nil {
-		return err
-	}
-
-	return json.NewEncoder(fd).Encode(token)
+	return conf, nil
 }

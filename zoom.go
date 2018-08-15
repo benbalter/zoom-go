@@ -8,6 +8,7 @@ import (
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
+	"github.com/pkg/errors"
 	calendar "google.golang.org/api/calendar/v3"
 )
 
@@ -26,7 +27,7 @@ func NextEvent(service *calendar.Service) (*calendar.Event, error) {
 		OrderBy("startTime").
 		Do()
 	if err != nil {
-		return nil, err
+		return nil, errors.WithStack(err)
 	}
 
 	if len(events.Items) == 0 {
