@@ -108,22 +108,27 @@ func main() {
 		return
 	}
 
-	fmt.Printf("Your next meeting is %q.\n", meeting.Summary)
+	fmt.Printf("Your next meeting is %q, organized by %s.\n", meeting.Summary, meeting.Organizer.DisplayName)
+
+	startTime, err := zoom.MeetingStartTime(meeting)
+	if startTime.Sub(time.Now()) < 0 {
+		fmt.Printf("It started %s.\n", zoom.HumanizedStartTime(meeting))
+	} else {
+		fmt.Printf("It starts %s.\n", zoom.HumanizedStartTime(meeting))
+	}
+
+	fmt.Printf("Calendar event URL: %s\n\n", meeting.HtmlLink)
 
 	url, ok := zoom.MeetingURLFromEvent(meeting)
 	if !ok {
-		fmt.Println("Your next meeting is not a Zoom meeting.")
+		fmt.Println("No Zoom URL found in the meeting.")
 		os.Exit(1)
 	}
-
-	fmt.Printf("It starts %s", zoom.HumanizedStartTime(meeting))
 
 	if zoom.IsMeetingSoon(meeting) {
 		fmt.Printf("Opening %s...\n", url)
 		open.Run(url.String())
 	} else {
-		fmt.Printf("Here's the URL %s\n", url)
+		fmt.Printf("Zoom URL: %s\n", url)
 	}
-
-	fmt.Printf("Oh, and here's the URL in case you need it: %s\n", meeting.HtmlLink)
 }

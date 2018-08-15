@@ -63,7 +63,7 @@ func MeetingURLFromEvent(event *calendar.Event) (*url.URL, bool) {
 
 // IsMeetingSoon returns true if the meeting is less than 5 minutes from now.
 func IsMeetingSoon(event *calendar.Event) bool {
-	startTime, err := time.Parse(time.RFC3339, event.Start.DateTime)
+	startTime, err := MeetingStartTime(event)
 	if err != nil {
 		return false
 	}
@@ -72,9 +72,14 @@ func IsMeetingSoon(event *calendar.Event) bool {
 
 // HumanizedStartTime converts the event's start time to a human-friendly statement.
 func HumanizedStartTime(event *calendar.Event) string {
-	startTime, err := time.Parse(time.RFC3339, event.Start.DateTime)
+	startTime, err := MeetingStartTime(event)
 	if err != nil {
 		return err.Error()
 	}
 	return humanize.Time(startTime)
+}
+
+// MeetingStartTime returns the calendar event's start time.
+func MeetingStartTime(event *calendar.Event) (time.Time, error) {
+	return time.Parse(time.RFC3339, event.Start.DateTime)
 }
