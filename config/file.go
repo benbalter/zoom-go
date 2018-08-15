@@ -45,9 +45,19 @@ func (f *FileProvider) GoogleClientConfig() (*oauth2.Config, error) {
 		return f.cachedGoogleClientConfig, nil
 	}
 
-	conf := &oauth2.Config{}
+	path := filepath.Join(f.directory, googleClientConfigFilename)
 
-	fd, err := os.Open(filepath.Join(f.directory, googleClientConfigFilename))
+	conf, err := ReadGoogleClientConfigFromFile(path)
+	if err != nil && err.Error() != "oauth2/google: no credentials found" {
+		return conf, err
+	}
+	if err == nil && conf != nil {
+		return conf, f.StoreGoogleClientConfig(conf)
+	}
+
+	conf = &oauth2.Config{}
+
+	fd, err := os.Open(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, ErrNoGoogleClientConfig
