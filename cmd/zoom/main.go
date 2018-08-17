@@ -1,200 +1,134 @@
 package main
 
 import (
-	"context"
-	"encoding/json"
+	"flag"
 	"fmt"
-	"io/ioutil"
-	"log"
-	"net/http"
-	"net/url"
 	"os"
-	"os/user"
-	"path"
-	"regexp"
-	"strconv"
 	"time"
 
-	humanize "github.com/dustin/go-humanize"
-	open "github.com/skratchdot/open-golang/open"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
-	calendar "google.golang.org/api/calendar/v3"
+	"github.com/pkg/errors"
+	"github.com/skratchdot/open-golang/open"
+
+	zoom "github.com/benbalter/zoom-go"
+	"github.com/benbalter/zoom-go/config"
 )
 
-func inConfigDir(file string) string {
-	usr, err := user.Current()
+func printSetupInstructions() {
+	fmt.Print(`In order to use Zoom Launcher, you need to create an OAuth app and authorize it to access your calendar. 
+You can do it in four, not-so-easy steps:
 
-	if err != nil {
-		log.Fatalf("Can't find home directory: %v", err)
-	}
-
-	return path.Join(usr.HomeDir, ".config", "google", file)
+1. Create a new project
+	1. Go to https://console.developers.google.com
+	2. Switch to your work account if need be (top right)
+	3. Create a new project dropdown, top left next to your domain
+2. Grant the project Calendar API access
+	1. Click "Enable API"
+	2. Type "Calendar" in the search box
+	3. Click "Calendar API"
+	4. Click "Enable"
+3. Grab your credentials
+	1. Click "Credentials" on the left side
+	2. Create a new OAuth credential with type "other"
+	3. Download the credential to ~/.config/google/client_secrets.json (icon, right side)
+4. Run 'zoom -import=Downloads/client_secrets.json' and follow the instructions to authorize the app.
+`)
 }
 
-// Retrieve a token, saves the token, then returns the generated client.
-func getClient(config *oauth2.Config) *http.Client {
-
-	tokFile := inConfigDir("token.json")
-	tok, err := tokenFromFile(tokFile)
+func importGoogleClientConfig(provider config.Provider, filename string) error {
+	conf, err := config.ReadGoogleClientConfigFromFile(filename)
 	if err != nil {
-		tok = getTokenFromWeb(config)
-		saveToken(tokFile, tok)
+		return err
 	}
-	return config.Client(context.Background(), tok)
+
+	return provider.StoreGoogleClientConfig(conf)
 }
 
-// Request a token from the web, then returns the retrieved token.
-func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
-	authURL := config.AuthCodeURL("state-token", oauth2.AccessTypeOffline)
+func authorizeAccount(provider config.Provider) error {
+	authURL, err := zoom.GoogleCalendarAuthorizationURL(provider)
+	if err != nil {
+		return err
+	}
 
-	fmt.Println("Your browser is about to open. When it does, please authorize the application when prompted and paste the token it gives you below")
-	fmt.Println("Authorization token: ")
+	fmt.Println("Your browser is about to open. When it does, please authorize the application when prompted and paste the token it gives you below.")
 	time.Sleep(5 * time.Second)
 	open.Run(authURL)
 
+	fmt.Print("Authorization token: ")
 	var authCode string
 	if _, err := fmt.Scan(&authCode); err != nil {
-		log.Fatalf("Unable to read authorization code: %v", err)
+		return errors.WithStack(err)
 	}
-
-	tok, err := config.Exchange(oauth2.NoContext, authCode)
-	if err != nil {
-		log.Fatalf("Unable to retrieve token from web: %v", err)
-	}
-	return tok
-}
-
-// Retrieves a token from a local file.
-func tokenFromFile(file string) (*oauth2.Token, error) {
-	f, err := os.Open(file)
-	defer f.Close()
-	if err != nil {
-		return nil, err
-	}
-	tok := &oauth2.Token{}
-	err = json.NewDecoder(f).Decode(tok)
-	return tok, err
-}
-
-// Saves a token to a file path.
-func saveToken(path string, token *oauth2.Token) {
-	fmt.Printf("Saving credential file to: %s\n", path)
-	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0600)
-	defer f.Close()
-	if err != nil {
-		log.Fatalf("Unable to cache oauth token: %v", err)
-	}
-	json.NewEncoder(f).Encode(token)
-}
-
-func zoomURL(meeting *calendar.Event) (*url.URL, error) {
-	fullURL, meetingID, matched := meetingURLParts(meeting)
-
-	if !matched {
-		return url.Parse("")
-	} else if _, err := strconv.Atoi(meetingID); err == nil {
-		return url.Parse("zoommtg://zoom.us/join?confno=" + meetingID)
-	} else {
-		return url.Parse(fullURL)
-	}
-}
-
-func inPast(meeting *calendar.Event) bool {
-	return meeting.Start.DateTime < time.Now().Format(time.RFC3339)
-}
-
-func startTime(meeting *calendar.Event) (time.Time, error) {
-	return time.Parse(time.RFC3339, meeting.Start.DateTime)
-}
-
-func humanizedStartTime(meeting *calendar.Event) string {
-	time, _ := startTime(meeting)
-	return humanize.Time(time)
-}
-
-func moreThanFiveMinutesFromNow(meeting *calendar.Event) bool {
-	start, _ := startTime(meeting)
-	return time.Until(start).Minutes() > 5
-}
-
-func service() *calendar.Service {
-	file := inConfigDir("client_secrets.json")
-	b, err := ioutil.ReadFile(file)
-	if err != nil {
-		log.Fatalf("Unable to read client secret file: %v", err)
-	}
-
-	// If modifying these scopes, delete your previously saved client_secret.json.
-	config, err := google.ConfigFromJSON(b, calendar.CalendarReadonlyScope)
-	if err != nil {
-		log.Fatalf("Unable to parse client secret file to config: %v", err)
-	}
-
-	srv, err := calendar.New(getClient(config))
-	if err != nil {
-		log.Fatalf("Unable to retrieve Calendar client: %v", err)
-	}
-
-	return srv
-}
-
-func events() *calendar.Events {
-	t := time.Now().Format(time.RFC3339)
-	events, err := service().Events.List("primary").ShowDeleted(false).
-		SingleEvents(true).TimeMin(t).MaxResults(1).OrderBy("startTime").Do()
-
-	if err != nil {
-		log.Fatalf("Unable to retrieve next meeting: %v", err)
-	}
-
-	return events
-}
-
-func meetingURLParts(meeting *calendar.Event) (string, string, bool) {
-	r, _ := regexp.Compile(`https://.*?\.zoom\.us/(?:j/(\d+)|my/(\S+))`)
-	matches := r.FindAllStringSubmatch(meeting.Location+" "+meeting.Description, -1)
-
-	if len(matches) > 0 {
-		return matches[0][0], matches[0][1], true
-	}
-
-	return "", "", false
+	return zoom.HandleGoogleCalendarAuthorization(provider, authCode)
 }
 
 func main() {
-	events := events()
+	provider, err := config.NewFileProvider()
+	if err != nil {
+		fmt.Printf("unable to create file configuration provider: %+v\n", err)
+		os.Exit(1)
+	}
 
-	if len(events.Items) == 0 {
+	importCredential := flag.String("import", "", "Full path to your downloaded Google OAuth2 client_secret JSON file")
+	flag.Parse()
+
+	if importCredential != nil && *importCredential != "" {
+		fmt.Printf("Importing credentials from %q...\n", *importCredential)
+		if err := importGoogleClientConfig(provider, *importCredential); err != nil {
+			fmt.Printf("error importing credentials: %+v\n", err)
+		}
+	}
+
+	if !provider.GoogleClientConfigExists() {
+		printSetupInstructions()
+		os.Exit(1)
+	}
+
+	if !provider.GoogleTokenExists() {
+		if err := authorizeAccount(provider); err != nil {
+			fmt.Printf("error authorizing: %+v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println("Stored credentials.")
+	}
+
+	calendar, err := zoom.NewGoogleCalendarService(provider)
+	if err != nil {
+		fmt.Printf("error creating google calendar client: %+v\n", err)
+		os.Exit(1)
+	}
+
+	meeting, err := zoom.NextEvent(calendar)
+	if err != nil {
+		fmt.Printf("error fetching next meeting: %+v\n", err)
+		os.Exit(1)
+	}
+
+	if meeting == nil {
 		fmt.Println("No upcoming events found.")
 		return
 	}
 
-	meeting := events.Items[0]
-	url, err := zoomURL(meeting)
+	fmt.Printf("Your next meeting is %q, organized by %s.\n", meeting.Summary, meeting.Organizer.DisplayName)
 
-	if err != nil || url.String() == "" {
-		fmt.Println("Your next meeting isn't a Zoom meeting")
-		return
+	startTime, err := zoom.MeetingStartTime(meeting)
+	if startTime.Sub(time.Now()) < 0 {
+		fmt.Printf("It started %s.\n", zoom.HumanizedStartTime(meeting))
+	} else {
+		fmt.Printf("It starts %s.\n", zoom.HumanizedStartTime(meeting))
 	}
 
-	fmt.Printf("Your next Zoom meeting is %s\n", meeting.Summary)
+	fmt.Printf("Calendar event URL: %s\n\n", meeting.HtmlLink)
 
-	isWas := ""
-	if inPast(meeting) {
-		isWas = "was"
-	} else {
-		isWas = "is"
+	url, ok := zoom.MeetingURLFromEvent(meeting)
+	if !ok {
+		fmt.Println("No Zoom URL found in the meeting.")
+		os.Exit(1)
 	}
 
-	fmt.Printf("It %s scheduled to start %s\n", isWas, humanizedStartTime(meeting))
-
-	if moreThanFiveMinutesFromNow(meeting) {
-		fmt.Printf("Here's the URL %s\n", url)
-	} else {
+	if zoom.IsMeetingSoon(meeting) {
 		fmt.Printf("Opening %s...\n", url)
 		open.Run(url.String())
+	} else {
+		fmt.Printf("Zoom URL: %s\n", url)
 	}
-
-	fmt.Printf("Oh, and here's the URL in case you need it: %s\n", meeting.HtmlLink)
 }
