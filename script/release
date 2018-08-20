@@ -1,0 +1,28 @@
+#!/bin/sh
+
+command -v goreleaser > /dev/null || {
+    echo "Please install goreleaser. See https://goreleaser.com/introduction/#installing-goreleaser"
+    echo "If you're using a Mac, we recommend running 'brew install goreleaser/tap/goreleaser'."
+    exit 1
+}
+
+
+# Take next version from args
+version="$1"
+repo="https://github.com/benbalter/zoom-go"
+
+# If "$1" is empty, get version from last git tag
+if [ "$version" = "" ]; then
+    version=$(git tag | tail -n1)
+fi
+
+# Check if the tag is already released
+tag_found=$(curl -fsI --write-out "%{http_code}" "$repo/releases/tag/$version")
+# If the tag is released, exit
+if [ "$tag_found" -eq "200" ]; then
+    echo "tag $version already exists. Please specify a different tag."
+    exit 1
+fi
+
+# Create the tag and run goreleaser
+git tag -a "$version" -m "Release $version" && goreleaser --rm-dist
