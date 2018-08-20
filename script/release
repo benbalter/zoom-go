@@ -18,10 +18,11 @@ fi
 
 # Check if the tag is already released
 tag_found=$(curl -fsI --write-out "%{http_code}" "$repo/releases/tag/$version")
+
 # If the tag is released, exit
-if [ "$tag_found" -eq "200" ]; then
-    echo "tag $version already exists. Please specify a different tag."
-    exit 1
+if [ "$tag_found" = "200" ]; then
+  echo "tag $version already exists. Please specify a different tag."
+  exit 1
 fi
 
 # Create the tag and run goreleaser
