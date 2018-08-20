@@ -11,17 +11,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:f5a167a7e209c6d47cb8763fc51ceb79605fac21a4da373252695572055c14a4"
-  name = "github.com/benbalter/zoom-go"
-  packages = [
-    ".",
-    "config",
-  ]
-  pruneopts = "UT"
-  revision = "fa9344ae90782f4bc379d3643f3208460f8a0adc"
-
-[[projects]]
-  branch = "master"
   digest = "1:6f9339c912bbdda81302633ad7e99a28dfa5a639c864061f1929510a9a64aa74"
   name = "github.com/dustin/go-humanize"
   packages = ["."]
@@ -35,14 +24,6 @@
   pruneopts = "UT"
   revision = "b4deda0973fb4c70b50d226b1af49f3da59f5265"
   version = "v1.1.0"
-
-[[projects]]
-  digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
-  name = "github.com/pkg/errors"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
-  version = "v0.8.0"
 
 [[projects]]
   branch = "master"
@@ -113,10 +94,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/benbalter/zoom-go",
-    "github.com/benbalter/zoom-go/config",
     "github.com/dustin/go-humanize",
-    "github.com/pkg/errors",
     "github.com/skratchdot/open-golang/open",
     "golang.org/x/oauth2",
     "golang.org/x/oauth2/google",
