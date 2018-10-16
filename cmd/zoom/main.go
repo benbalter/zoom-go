@@ -108,7 +108,14 @@ func main() {
 		return
 	}
 
-	fmt.Printf("Your next meeting is %q, organized by %s.\n", meeting.Summary, meeting.Organizer.DisplayName)
+	fmt.Printf("Your next meeting is %q", meeting.Summary)
+	if meeting.Organizer.DisplayName != "" {
+		fmt.Printf(", organized by %s.\n", meeting.Organizer.DisplayName)
+	} else if meeting.Creator.DisplayName != "" {
+		fmt.Printf(", created by %s.\n", meeting.Creator.DisplayName)
+	} else {
+		fmt.Printf(".\n")
+	}
 
 	startTime, err := zoom.MeetingStartTime(meeting)
 	if startTime.Sub(time.Now()) < 0 {
