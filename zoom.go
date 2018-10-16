@@ -15,6 +15,7 @@ import (
 var zoomURLRegexp = regexp.MustCompile(`https://.*?\.zoom\.us/(?:j/(\d+)|my/(\S+))`)
 
 // NextEvent returns the next calendar event in your primary calendar.
+// It will list at most 10 events, and select the first one with a Zoom URL if one exists.
 func NextEvent(service *calendar.Service) (*calendar.Event, error) {
 	t := time.Now().Format(time.RFC3339)
 
@@ -23,7 +24,7 @@ func NextEvent(service *calendar.Service) (*calendar.Event, error) {
 		ShowDeleted(false).
 		SingleEvents(true).
 		TimeMin(t).
-		MaxResults(1).
+		MaxResults(10).
 		OrderBy("startTime").
 		Do()
 	if err != nil {
@@ -34,6 +35,13 @@ func NextEvent(service *calendar.Service) (*calendar.Event, error) {
 		return nil, nil
 	}
 
+	for _, event := range events.Items {
+		if _, ok := MeetingURLFromEvent(event); ok {
+			return event, nil
+		}
+	}
+
+	// We couldn't find an event with a Zoom URL, so just return the first event.
 	return events.Items[0], nil
 }
 
