@@ -79,7 +79,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:a186cb69e75d12dfb9ae80912be63bdaad595aae4e94de710cb2fb8ab4757561"
+  digest = "1:bdf95f917585ee8beabe1906e758bfd8e66d1ed11737e04627d465503c282853"
   name = "google.golang.org/api"
   packages = [
     "calendar/v3",
@@ -88,7 +88,7 @@
     "googleapi/internal/uritemplates",
   ]
   pruneopts = "UT"
-  revision = "0e8d13b5c025da6a7cf249bb854e5869921dd459"
+  revision = "c4edf6535eee1d314d283301186559db8475d25b"
 
 [[projects]]
   digest = "1:c8907869850adaa8bd7631887948d0684f3787d0912f1c01ab72581a6c34432e"
