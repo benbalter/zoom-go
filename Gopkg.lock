@@ -65,7 +65,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:bea0314c10bd362ab623af4880d853b5bad3b63d0ab9945c47e461b8d04203ed"
+  digest = "1:96b6be1c4668c5effd2fb4d7c0197613e2c36daae6649ba3fd79ad9ad55da932"
   name = "golang.org/x/oauth2"
   packages = [
     ".",
@@ -75,7 +75,7 @@
     "jwt",
   ]
   pruneopts = "UT"
-  revision = "3d292e4d0cdc3a0113e6d207bb137145ef1de42f"
+  revision = "ca4130e427c7982e64cb9b5e717ff67bdb725037"
 
 [[projects]]
   branch = "master"
