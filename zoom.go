@@ -2,6 +2,8 @@
 package zoom
 
 import (
+	"bytes"
+	"fmt"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -15,6 +17,7 @@ import (
 var zoomURLRegexp = regexp.MustCompile(`https://.*?\.zoom\.us/(?:j/(\d+)|my/(\S+))`)
 
 // NextEvent returns the next calendar event in your primary calendar.
+// It will list at most 10 events, and select the first one with a Zoom URL if one exists.
 func NextEvent(service *calendar.Service) (*calendar.Event, error) {
 	t := time.Now().Format(time.RFC3339)
 
@@ -23,7 +26,7 @@ func NextEvent(service *calendar.Service) (*calendar.Event, error) {
 		ShowDeleted(false).
 		SingleEvents(true).
 		TimeMin(t).
-		MaxResults(1).
+		MaxResults(10).
 		OrderBy("startTime").
 		Do()
 	if err != nil {
@@ -34,6 +37,13 @@ func NextEvent(service *calendar.Service) (*calendar.Event, error) {
 		return nil, nil
 	}
 
+	for _, event := range events.Items {
+		if _, ok := MeetingURLFromEvent(event); ok {
+			return event, nil
+		}
+	}
+
+	// We couldn't find an event with a Zoom URL, so just return the first event.
 	return events.Items[0], nil
 }
 
@@ -82,4 +92,29 @@ func HumanizedStartTime(event *calendar.Event) string {
 // MeetingStartTime returns the calendar event's start time.
 func MeetingStartTime(event *calendar.Event) (time.Time, error) {
 	return time.Parse(time.RFC3339, event.Start.DateTime)
+}
+
+// MeetingSummary generates a string one-line summary of the meeting.
+func MeetingSummary(event *calendar.Event) string {
+	if event == nil {
+		return ""
+	}
+
+	var output bytes.Buffer
+
+	if event.Summary != "" {
+		fmt.Fprintf(&output, "Your next meeting is %q", event.Summary)
+	} else {
+		fmt.Fprint(&output, "You have a meeting coming up")
+	}
+
+	if event.Organizer != nil && event.Organizer.DisplayName != "" {
+		fmt.Fprintf(&output, ", organized by %s.", event.Organizer.DisplayName)
+	} else if event.Creator != nil && event.Creator.DisplayName != "" {
+		fmt.Fprintf(&output, ", created by %s.", event.Creator.DisplayName)
+	} else {
+		fmt.Fprintf(&output, ".")
+	}
+
+	return output.String()
 }
