@@ -119,3 +119,33 @@ func newFakeGoogleCalendarService(t *testing.T, mux http.Handler) (*calendar.Ser
 
 	return service, server.Close
 }
+
+func TestMeetingSummary(t *testing.T) {
+	// nil event
+	assert.Equal(t, "", MeetingSummary(nil))
+
+	// empty event
+	assert.Equal(t, "You have a meeting coming up.", MeetingSummary(&calendar.Event{}))
+
+	// event with only summary
+	assert.Equal(t, `Your next meeting is "Make plans for Q4".`, MeetingSummary(&calendar.Event{
+		Summary: "Make plans for Q4",
+	}))
+
+	// event with only an organizer
+	assert.Equal(t, `You have a meeting coming up, organized by Johnny Appleseed.`, MeetingSummary(&calendar.Event{
+		Organizer: &calendar.EventOrganizer{DisplayName: "Johnny Appleseed"},
+	}))
+
+	// event with only a creator
+	assert.Equal(t, `You have a meeting coming up, created by Mona Lisa.`, MeetingSummary(&calendar.Event{
+		Creator: &calendar.EventCreator{DisplayName: "Mona Lisa"},
+	}))
+
+	// event with all
+	assert.Equal(t, `Your next meeting is "Make plans for Q4", organized by Johnny Appleseed.`, MeetingSummary(&calendar.Event{
+		Summary:   "Make plans for Q4",
+		Creator:   &calendar.EventCreator{DisplayName: "Mona Lisa"},
+		Organizer: &calendar.EventOrganizer{DisplayName: "Johnny Appleseed"},
+	}))
+}

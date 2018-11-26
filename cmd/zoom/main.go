@@ -14,7 +14,7 @@ import (
 )
 
 func printSetupInstructions() {
-	fmt.Print(`In order to use Zoom Launcher, you need to create an OAuth app and authorize it to access your calendar. 
+	fmt.Print(`In order to use Zoom Launcher, you need to create an OAuth app and authorize it to access your calendar.
 You can do it in four, not-so-easy steps:
 
 1. Create a new project
@@ -108,14 +108,7 @@ func main() {
 		return
 	}
 
-	fmt.Printf("Your next meeting is %q", meeting.Summary)
-	if meeting.Organizer.DisplayName != "" {
-		fmt.Printf(", organized by %s.\n", meeting.Organizer.DisplayName)
-	} else if meeting.Creator.DisplayName != "" {
-		fmt.Printf(", created by %s.\n", meeting.Creator.DisplayName)
-	} else {
-		fmt.Printf(".\n")
-	}
+	fmt.Printf(zoom.MeetingSummary(meeting))
 
 	startTime, err := zoom.MeetingStartTime(meeting)
 	if startTime.Sub(time.Now()) < 0 {
