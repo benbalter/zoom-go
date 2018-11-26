@@ -2,6 +2,8 @@
 package zoom
 
 import (
+	"bytes"
+	"fmt"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -90,4 +92,29 @@ func HumanizedStartTime(event *calendar.Event) string {
 // MeetingStartTime returns the calendar event's start time.
 func MeetingStartTime(event *calendar.Event) (time.Time, error) {
 	return time.Parse(time.RFC3339, event.Start.DateTime)
+}
+
+// MeetingSummary generates a string one-line summary of the meeting.
+func MeetingSummary(event *calendar.Event) string {
+	if event == nil {
+		return ""
+	}
+
+	var output bytes.Buffer
+
+	if event.Summary != "" {
+		fmt.Fprintf(&output, "Your next meeting is %q", event.Summary)
+	} else {
+		fmt.Fprint(&output, "You have a meeting coming up")
+	}
+
+	if event.Organizer != nil && event.Organizer.DisplayName != "" {
+		fmt.Fprintf(&output, ", organized by %s.", event.Organizer.DisplayName)
+	} else if event.Creator != nil && event.Creator.DisplayName != "" {
+		fmt.Fprintf(&output, ", created by %s.", event.Creator.DisplayName)
+	} else {
+		fmt.Fprintf(&output, ".")
+	}
+
+	return output.String()
 }
