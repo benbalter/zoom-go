@@ -9,4 +9,6 @@ before_install:
   - chmod +x $GOPATH/bin/dep
 
 install: script/bootstrap
-script: script/test
+script:
+- script/test
+- script/build
