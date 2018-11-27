@@ -14,6 +14,8 @@ import (
 	calendar "google.golang.org/api/calendar/v3"
 )
 
+const googleCalendarDateTimeFormat = time.RFC3339
+
 var zoomURLRegexp = regexp.MustCompile(`https://.*?\.zoom\.us/(?:j/(\d+)|my/(\S+))`)
 
 // NextEvent returns the next calendar event in your primary calendar.
@@ -77,7 +79,8 @@ func IsMeetingSoon(event *calendar.Event) bool {
 	if err != nil {
 		return false
 	}
-	return time.Until(startTime).Minutes() < 5
+	minutesUntilStart := time.Until(startTime).Minutes()
+	return minutesUntilStart > 0 && minutesUntilStart < 5
 }
 
 // HumanizedStartTime converts the event's start time to a human-friendly statement.
@@ -91,10 +94,13 @@ func HumanizedStartTime(event *calendar.Event) string {
 
 // MeetingStartTime returns the calendar event's start time.
 func MeetingStartTime(event *calendar.Event) (time.Time, error) {
-	return time.Parse(time.RFC3339, event.Start.DateTime)
+	if event == nil || event.Start == nil || event.Start.DateTime == "" {
+		return time.Time{}, errors.New("event does not have a start datetime")
+	}
+	return time.Parse(googleCalendarDateTimeFormat, event.Start.DateTime)
 }
 
-// MeetingSummary generates a string one-line summary of the meeting.
+// MeetingSummary generates a one-line summary of the meeting as a string.
 func MeetingSummary(event *calendar.Event) string {
 	if event == nil {
 		return ""

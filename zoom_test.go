@@ -84,6 +84,7 @@ func TestNextEvent(t *testing.T) {
 	event, err := NextEvent(service)
 	require.NoError(t, err)
 	require.NotNil(t, event)
+	assert.Equal(t, 1, actualRequests)
 
 	assert.Equal(t, &calendar.Event{
 		Created: "2018-10-09T17:00:00-07:00",
@@ -108,6 +109,29 @@ func TestNextEvent(t *testing.T) {
 
 }
 
+func TestNextEvent_NoUpcomingEvents(t *testing.T) {
+	mux := http.NewServeMux()
+
+	service, shutdown := newFakeGoogleCalendarService(t, mux)
+	defer shutdown()
+
+	actualRequests := 0
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		actualRequests++
+
+		if r.URL.Path == "/calendars/primary/events" {
+			fmt.Fprintf(w, `{"items":[]}`)
+		} else {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL)
+		}
+	})
+
+	event, err := NextEvent(service)
+	require.NoError(t, err)
+	assert.Equal(t, 1, actualRequests)
+	assert.Nil(t, event)
+}
+
 func newFakeGoogleCalendarService(t *testing.T, mux http.Handler) (*calendar.Service, func()) {
 	service, err := calendar.New(&http.Client{})
 	if err != nil {
@@ -121,31 +145,69 @@ func newFakeGoogleCalendarService(t *testing.T, mux http.Handler) (*calendar.Ser
 }
 
 func TestMeetingSummary(t *testing.T) {
-	// nil event
-	assert.Equal(t, "", MeetingSummary(nil))
+	testCases := []struct {
+		input    *calendar.Event
+		expected string
+	}{
+		{nil, ""},
+		{&calendar.Event{}, "You have a meeting coming up."},
+		{&calendar.Event{Summary: "Make plans for Q4"}, `Your next meeting is "Make plans for Q4".`},
+		{&calendar.Event{
+			Creator: &calendar.EventCreator{DisplayName: "Mona Lisa"},
+		}, `You have a meeting coming up, created by Mona Lisa.`},
+		{&calendar.Event{
+			Organizer: &calendar.EventOrganizer{DisplayName: "Johnny Appleseed"},
+		}, `You have a meeting coming up, organized by Johnny Appleseed.`},
+		{&calendar.Event{
+			Summary:   "Make plans for Q4",
+			Creator:   &calendar.EventCreator{DisplayName: "Mona Lisa"},
+			Organizer: &calendar.EventOrganizer{DisplayName: "Johnny Appleseed"},
+		}, `Your next meeting is "Make plans for Q4", organized by Johnny Appleseed.`},
+	}
+	for _, testCase := range testCases {
+		assert.Equal(t, testCase.expected, MeetingSummary(testCase.input), "input: %+v", testCase.input)
+	}
+}
 
-	// empty event
-	assert.Equal(t, "You have a meeting coming up.", MeetingSummary(&calendar.Event{}))
+func TestIsMeetingSoon(t *testing.T) {
+	testCases := []struct {
+		input    *calendar.Event
+		expected bool
+	}{
+		{nil, false},
+		{&calendar.Event{}, false},
+		{&calendar.Event{Start: &calendar.EventDateTime{}}, false},
+		{&calendar.Event{Start: &calendar.EventDateTime{
+			DateTime: time.Now().Add(-5 * time.Minute).Format(googleCalendarDateTimeFormat),
+		}}, false},
+		{&calendar.Event{Start: &calendar.EventDateTime{
+			DateTime: time.Now().Add(5 * time.Minute).Format(googleCalendarDateTimeFormat),
+		}}, true},
+		{&calendar.Event{Start: &calendar.EventDateTime{
+			DateTime: time.Now().Add(12 * time.Minute).Format(googleCalendarDateTimeFormat),
+		}}, false},
+	}
+	for _, testCase := range testCases {
+		assert.Equal(t, testCase.expected, IsMeetingSoon(testCase.input))
+	}
+}
 
-	// event with only summary
-	assert.Equal(t, `Your next meeting is "Make plans for Q4".`, MeetingSummary(&calendar.Event{
-		Summary: "Make plans for Q4",
-	}))
-
-	// event with only an organizer
-	assert.Equal(t, `You have a meeting coming up, organized by Johnny Appleseed.`, MeetingSummary(&calendar.Event{
-		Organizer: &calendar.EventOrganizer{DisplayName: "Johnny Appleseed"},
-	}))
-
-	// event with only a creator
-	assert.Equal(t, `You have a meeting coming up, created by Mona Lisa.`, MeetingSummary(&calendar.Event{
-		Creator: &calendar.EventCreator{DisplayName: "Mona Lisa"},
-	}))
-
-	// event with all
-	assert.Equal(t, `Your next meeting is "Make plans for Q4", organized by Johnny Appleseed.`, MeetingSummary(&calendar.Event{
-		Summary:   "Make plans for Q4",
-		Creator:   &calendar.EventCreator{DisplayName: "Mona Lisa"},
-		Organizer: &calendar.EventOrganizer{DisplayName: "Johnny Appleseed"},
-	}))
+func TestHumanizedStartTime(t *testing.T) {
+	testCases := []struct {
+		input    *calendar.Event
+		expected string
+	}{
+		{nil, "event does not have a start datetime"},
+		{&calendar.Event{}, "event does not have a start datetime"},
+		{&calendar.Event{Start: &calendar.EventDateTime{}}, "event does not have a start datetime"},
+		{&calendar.Event{Start: &calendar.EventDateTime{
+			DateTime: time.Now().Add(-12 * time.Minute).Format(googleCalendarDateTimeFormat),
+		}}, "12 minutes ago"},
+		{&calendar.Event{Start: &calendar.EventDateTime{
+			DateTime: time.Now().Add(12 * time.Minute).Format(googleCalendarDateTimeFormat),
+		}}, "11 minutes from now"},
+	}
+	for _, testCase := range testCases {
+		assert.Equal(t, testCase.expected, HumanizedStartTime(testCase.input))
+	}
 }

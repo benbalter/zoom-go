@@ -1,3 +1,17 @@
+// Command zoom prints your next Google Calendar event and opens Zoom if the meeting is a zoom meeting.
+//
+// To install, run:
+//     go install github.com/benbalter/zoom-go/cmd/zoom
+//
+// To use, run:
+//     zoom
+//
+// If you used the Ruby gem zoom_launcher, this project will gladly use the credentials you generated before.
+//
+// When setting up your credentials, you will run:
+//     zoom -import=$HOME/Downloads/google_credentials.json
+//
+// Then, you can run the zoom command without any issue.
 package main
 
 import (
@@ -9,7 +23,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/skratchdot/open-golang/open"
 
-	zoom "github.com/benbalter/zoom-go"
+	"github.com/benbalter/zoom-go"
 	"github.com/benbalter/zoom-go/config"
 )
 
@@ -108,7 +122,7 @@ func main() {
 		return
 	}
 
-	fmt.Printf(zoom.MeetingSummary(meeting))
+	fmt.Println(zoom.MeetingSummary(meeting))
 
 	startTime, err := zoom.MeetingStartTime(meeting)
 	if startTime.Sub(time.Now()) < 0 {
