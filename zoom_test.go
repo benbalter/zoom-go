@@ -181,6 +181,9 @@ func TestIsMeetingSoon(t *testing.T) {
 			DateTime: time.Now().Add(-5 * time.Minute).Format(googleCalendarDateTimeFormat),
 		}}, false},
 		{&calendar.Event{Start: &calendar.EventDateTime{
+			DateTime: time.Now().Add(-2 * time.Minute).Format(googleCalendarDateTimeFormat),
+		}}, true},
+		{&calendar.Event{Start: &calendar.EventDateTime{
 			DateTime: time.Now().Add(5 * time.Minute).Format(googleCalendarDateTimeFormat),
 		}}, true},
 		{&calendar.Event{Start: &calendar.EventDateTime{
