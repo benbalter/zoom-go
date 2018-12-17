@@ -80,7 +80,7 @@ func IsMeetingSoon(event *calendar.Event) bool {
 		return false
 	}
 	minutesUntilStart := time.Until(startTime).Minutes()
-	return minutesUntilStart > 0 && minutesUntilStart < 5
+	return -5 < minutesUntilStart && minutesUntilStart < 5
 }
 
 // HumanizedStartTime converts the event's start time to a human-friendly statement.
