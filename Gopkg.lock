@@ -104,7 +104,7 @@
     "googleapi/internal/uritemplates",
   ]
   pruneopts = "UT"
-  revision = "874d9dc5b186e361475b082852f136f094555c30"
+  revision = "f26a60c56f148a32e87f3f4591c8ebf834b5561f"
 
 [[projects]]
   digest = "1:c8907869850adaa8bd7631887948d0684f3787d0912f1c01ab72581a6c34432e"
