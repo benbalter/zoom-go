@@ -4,7 +4,15 @@ Port of https://github.com/benbalter/zoom-launcher to zoom. Go easy, it's my fir
 
 ## Installation
 
-To install, run:
+To install, download the tarball for your OS and architecture from the [latest release](https://github.com/benbalter/zoom-go/releases/latest). Extract the archive and copy the `zoom` binary somewhere on your `${PATH}`. :tada:
+
+```bash
+$ cd ~/Downloads
+$ tar zxvf zoom_0.2.0_macOS-64bit.tar.gz
+$ cp zoom ~/bin
+```
+
+If you want to live on the edge and run the latest master instead, [install Go](https://golang.org/doc/install) ([also on homebrew](https://formulae.brew.sh/formula/go)), then run:
 
 ```bash
 $ go get github.com/benbalter/zoom-go/cmd/zoom
@@ -14,7 +22,7 @@ This will install a `zoom` executable file into `$GOPATH/bin/zoom`.
 
 ## Usage
 
-Ensure `$GOPATH/bin` is in your `$PATH`, and run `zoom`! That's all.
+Ensure the `zoom` binary is in your `$PATH`, and run `zoom`! That's all.
 
 ## Authorization
 
