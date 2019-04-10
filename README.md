@@ -4,7 +4,7 @@ Port of https://github.com/benbalter/zoom-launcher to zoom. Go easy, it's my fir
 
 ## Installation
 
-To install, download the tarball for your OS and architecture from the [latest release](https://github.com/benbalter/zoom-go/releases). Extract the archive and copy the `zoom` binary somewhere on your `${PATH}`. :tada:
+To install, download the tarball for your OS and architecture from the [latest release](https://github.com/benbalter/zoom-go/releases/latest). Extract the archive and copy the `zoom` binary somewhere on your `${PATH}`. :tada:
 
 ```bash
 $ cd ~/Downloads
