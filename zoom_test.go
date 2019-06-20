@@ -53,9 +53,83 @@ var testEventResponse = `{
 				"dateTime": "2018-10-10T17:30:00-07:00",
 				"timeZone": "America/New_York"
 			}
+		},
+		{
+			"kind": "calendar#event",
+			"htmlLink": "lalala",
+			"created": "2018-10-09T17:00:00-07:00",
+			"summary": "I am a video call too",
+			"description": "I am a description for the video call\nhttps://jithub.zoom.us/j/12345",
+			"location": "",
+			"creator": {
+				"email": "parkr@jithub.com",
+				"displayName": "Parker Moore"
+			},
+			"organizer": {
+				"email": "kevin@jithub.com",
+				"displayName": "Kevin Jithub"
+			},
+			"start": {
+				"dateTime": "2018-10-10T17:30:00-07:00",
+				"timeZone": "America/New_York"
+			}
+		},
+		{
+			"kind": "calendar#event",
+			"htmlLink": "lalala",
+			"created": "2018-10-09T17:00:00-07:00",
+			"summary": "I am a video call tooooo",
+			"description": "I am a description for the video call",
+			"location": "https://jithub.zoom.us/j/12345",
+			"creator": {
+				"email": "parkr@jithub.com",
+				"displayName": "Parker Moore"
+			},
+			"organizer": {
+				"email": "kevin@jithub.com",
+				"displayName": "Kevin Jithub"
+			},
+			"start": {
+				"dateTime": "2018-10-10T17:30:00-07:00",
+				"timeZone": "America/New_York"
+			}
 		}
 	]
 }`
+
+func TestNextEvents(t *testing.T) {
+	mux := http.NewServeMux()
+
+	service, shutdown := newFakeGoogleCalendarService(t, mux)
+	defer shutdown()
+
+	actualRequests := 0
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		actualRequests++
+
+		if r.URL.Path == "/calendars/primary/events" {
+			query := r.URL.Query()
+			assert.Equal(t, query.Get("alt"), "json")
+			assert.Equal(t, query.Get("maxResults"), "30")
+			assert.Equal(t, query.Get("orderBy"), "startTime")
+			assert.Equal(t, query.Get("showDeleted"), "false")
+			assert.Equal(t, query.Get("singleEvents"), "true")
+			assert.Equal(t, query.Get("timeMin"), time.Now().Add(-5*time.Minute).Format(time.RFC3339))
+			fmt.Fprintf(w, testEventResponse)
+		} else {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL)
+		}
+	})
+
+	events, err := NextEvents(service, 3)
+	require.NoError(t, err)
+	require.Len(t, events, 3)
+	assert.Equal(t, 1, actualRequests)
+
+	assert.Equal(t, "I am a video call", events[0].Summary)
+	assert.Equal(t, "I am a video call too", events[1].Summary)
+	assert.Equal(t, "I am a video call tooooo", events[2].Summary)
+}
 
 func TestNextEvent(t *testing.T) {
 	mux := http.NewServeMux()
@@ -74,7 +148,7 @@ func TestNextEvent(t *testing.T) {
 			assert.Equal(t, query.Get("orderBy"), "startTime")
 			assert.Equal(t, query.Get("showDeleted"), "false")
 			assert.Equal(t, query.Get("singleEvents"), "true")
-			assert.Equal(t, query.Get("timeMin"), time.Now().Format(time.RFC3339))
+			assert.Equal(t, query.Get("timeMin"), time.Now().Add(-5*time.Minute).Format(time.RFC3339))
 			fmt.Fprintf(w, testEventResponse)
 		} else {
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL)
@@ -106,7 +180,6 @@ func TestNextEvent(t *testing.T) {
 		},
 		Summary: "I am a video call",
 	}, event)
-
 }
 
 func TestNextEvent_NoUpcomingEvents(t *testing.T) {
