@@ -22,6 +22,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/skratchdot/open-golang/open"
+	"google.golang.org/api/calendar/v3"
 
 	"github.com/benbalter/zoom-go"
 	"github.com/benbalter/zoom-go/config"
@@ -82,6 +83,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	count := flag.Int("count", 1, "Number of calendar events to print")
 	importCredential := flag.String("import", "", "Full path to your downloaded Google OAuth2 client_secret JSON file")
 	flag.Parse()
 
@@ -111,21 +113,45 @@ func main() {
 		os.Exit(1)
 	}
 
-	meeting, err := zoom.NextEvent(calendar)
+	meetings, err := zoom.NextEvents(calendar, *count)
 	if err != nil {
-		fmt.Printf("error fetching next meeting: %+v\n", err)
+		fmt.Printf("error fetching next meetings: %+v\n", err)
 		os.Exit(1)
 	}
 
-	if meeting == nil {
+	if len(meetings) == 0 {
 		fmt.Println("No upcoming events found.")
 		return
 	}
 
+	for _, meeting := range meetings {
+		printMeeting(meeting)
+		if *count > 1 {
+			fmt.Println("_____________________________________________________")
+		}
+	}
+
+	firstMeeting := meetings[0]
+	if zoom.IsMeetingSoon(firstMeeting) {
+		url, ok := zoom.MeetingURLFromEvent(firstMeeting)
+		if !ok {
+			fmt.Println("No Zoom URL found in the meeting.")
+			os.Exit(1)
+		}
+		fmt.Printf("Opening %s...\n", url)
+		_ = open.Run(url.String())
+	}
+}
+
+func printMeeting(meeting *calendar.Event) {
 	fmt.Println(zoom.MeetingSummary(meeting))
 
 	startTime, err := zoom.MeetingStartTime(meeting)
-	if startTime.Sub(time.Now()) < 0 {
+	if err != nil {
+		fmt.Println("This meeting does not have a start time...?")
+		return
+	}
+	if time.Until(startTime) < 0 {
 		fmt.Printf("It started %s.\n", zoom.HumanizedStartTime(meeting))
 	} else {
 		fmt.Printf("It starts %s.\n", zoom.HumanizedStartTime(meeting))
@@ -139,10 +165,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	if zoom.IsMeetingSoon(meeting) {
-		fmt.Printf("Opening %s...\n", url)
-		open.Run(url.String())
-	} else {
-		fmt.Printf("Zoom URL: %s\n", url)
-	}
+	fmt.Printf("Zoom URL: %s\n", url)
 }

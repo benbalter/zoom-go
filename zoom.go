@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	humanize "github.com/dustin/go-humanize"
@@ -18,17 +19,17 @@ const googleCalendarDateTimeFormat = time.RFC3339
 
 var zoomURLRegexp = regexp.MustCompile(`https://.*?\.zoom\.us/(?:j/(\d+)|my/(\S+))`)
 
-// NextEvent returns the next calendar event in your primary calendar.
-// It will list at most 10 events, and select the first one with a Zoom URL if one exists.
-func NextEvent(service *calendar.Service) (*calendar.Event, error) {
-	t := time.Now().Format(time.RFC3339)
+// NextEvents returns the next N calendar events in your primary calendar.
+// It only returns events which contain Zoom video chats.
+func NextEvents(service *calendar.Service, count int) ([]*calendar.Event, error) {
+	t := time.Now().Add(-5 * time.Minute).Format(time.RFC3339)
 
 	events, err := service.Events.
 		List("primary").
 		ShowDeleted(false).
 		SingleEvents(true).
 		TimeMin(t).
-		MaxResults(10).
+		MaxResults(int64(count * 10)).
 		OrderBy("startTime").
 		Do()
 	if err != nil {
@@ -39,19 +40,47 @@ func NextEvent(service *calendar.Service) (*calendar.Event, error) {
 		return nil, nil
 	}
 
+	zoomEvents := []*calendar.Event{}
 	for _, event := range events.Items {
-		if _, ok := MeetingURLFromEvent(event); ok {
-			return event, nil
+		if _, ok := MeetingURLFromEvent(event); !ok {
+			continue
+		}
+
+		zoomEvents = append(zoomEvents, event)
+
+		if len(zoomEvents) == count {
+			break
 		}
 	}
 
-	// We couldn't find an event with a Zoom URL, so just return the first event.
-	return events.Items[0], nil
+	if len(zoomEvents) == 0 {
+		return nil, errors.Errorf("no zoom events upcoming")
+	}
+
+	return zoomEvents, nil
+}
+
+// NextEvent returns the next calendar event in your primary calendar.
+// It will list at most 5 events, and select the first one with a Zoom URL if one exists.
+func NextEvent(service *calendar.Service) (*calendar.Event, error) {
+	events, err := NextEvents(service, 1)
+	if err != nil {
+		return nil, err
+	}
+	if len(events) == 0 {
+		return nil, nil
+	}
+	return events[0], nil
 }
 
 // MeetingURLFromEvent returns a URL if the event is a Zoom meeting.
 func MeetingURLFromEvent(event *calendar.Event) (*url.URL, bool) {
-	matches := zoomURLRegexp.FindAllStringSubmatch(event.Location+" "+event.Description, -1)
+	input := event.Location + " " + event.Description
+	if videoEntryPointURL, ok := conferenceVideoEntryPointURL(event); ok {
+		input = videoEntryPointURL + " " + input
+	}
+
+	matches := zoomURLRegexp.FindAllStringSubmatch(input, -1)
 	if len(matches) == 0 || len(matches[0]) == 0 {
 		return nil, false
 	}
@@ -71,6 +100,21 @@ func MeetingURLFromEvent(event *calendar.Event) (*url.URL, bool) {
 		return nil, false
 	}
 	return parsedURL, true
+}
+
+// conferenceVideoEntryPointURL returns the URL for the video entrypoint if one exists.
+func conferenceVideoEntryPointURL(event *calendar.Event) (string, bool) {
+	if event.ConferenceData == nil {
+		return "", false
+	}
+
+	for _, entryPoint := range event.ConferenceData.EntryPoints {
+		if entryPoint.EntryPointType == "video" && strings.Contains(entryPoint.Uri, "zoom") {
+			return entryPoint.Uri, true
+		}
+	}
+
+	return "", false
 }
 
 // IsMeetingSoon returns true if the meeting is less than 5 minutes from now.
