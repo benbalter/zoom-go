@@ -38,7 +38,7 @@ var testEventResponse = `{
 			"kind": "calendar#event",
 			"htmlLink": "lalala",
 			"created": "2018-10-09T17:00:00-07:00",
-			"summary": "I am a video call",
+			"summary": "URI in the location",
 			"description": "I am a description for the video call",
 			"location": "https://jithub.zoom.us/j/12345",
 			"creator": {
@@ -58,7 +58,7 @@ var testEventResponse = `{
 			"kind": "calendar#event",
 			"htmlLink": "lalala",
 			"created": "2018-10-09T17:00:00-07:00",
-			"summary": "I am a video call too",
+			"summary": "URI in the description",
 			"description": "I am a description for the video call\nhttps://jithub.zoom.us/j/12345",
 			"location": "",
 			"creator": {
@@ -78,9 +78,9 @@ var testEventResponse = `{
 			"kind": "calendar#event",
 			"htmlLink": "lalala",
 			"created": "2018-10-09T17:00:00-07:00",
-			"summary": "I am a video call tooooo",
+			"summary": "URI in the conference data entry points",
 			"description": "I am a description for the video call",
-			"location": "https://jithub.zoom.us/j/12345",
+			"location": "I am a location",
 			"creator": {
 				"email": "parkr@jithub.com",
 				"displayName": "Parker Moore"
@@ -92,6 +92,12 @@ var testEventResponse = `{
 			"start": {
 				"dateTime": "2018-10-10T17:30:00-07:00",
 				"timeZone": "America/New_York"
+			},
+			"conferenceData": {
+				"entryPoints": [
+					{"entryPointType": "video", "uri": "https://jithub.zoom.us/j/12345"},
+					{"entryPointType": "phone", "uri": "+12345"}
+				]
 			}
 		}
 	]
@@ -126,9 +132,9 @@ func TestNextEvents(t *testing.T) {
 	require.Len(t, events, 3)
 	assert.Equal(t, 1, actualRequests)
 
-	assert.Equal(t, "I am a video call", events[0].Summary)
-	assert.Equal(t, "I am a video call too", events[1].Summary)
-	assert.Equal(t, "I am a video call tooooo", events[2].Summary)
+	assert.Equal(t, "URI in the location", events[0].Summary)
+	assert.Equal(t, "URI in the description", events[1].Summary)
+	assert.Equal(t, "URI in the conference data entry points", events[2].Summary)
 }
 
 func TestNextEvent(t *testing.T) {
@@ -178,7 +184,7 @@ func TestNextEvent(t *testing.T) {
 			DateTime: "2018-10-10T17:30:00-07:00",
 			TimeZone: "America/New_York",
 		},
-		Summary: "I am a video call",
+		Summary: "URI in the location",
 	}, event)
 }
 

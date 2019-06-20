@@ -75,7 +75,12 @@ func NextEvent(service *calendar.Service) (*calendar.Event, error) {
 
 // MeetingURLFromEvent returns a URL if the event is a Zoom meeting.
 func MeetingURLFromEvent(event *calendar.Event) (*url.URL, bool) {
-	matches := zoomURLRegexp.FindAllStringSubmatch(event.Location+" "+event.Description, -1)
+	input := event.Location + " " + event.Description
+	if videoEntryPointURL, ok := conferenceVideoEntryPointURL(event); ok {
+		input = videoEntryPointURL + " " + input
+	}
+
+	matches := zoomURLRegexp.FindAllStringSubmatch(input, -1)
 	if len(matches) == 0 || len(matches[0]) == 0 {
 		return nil, false
 	}
@@ -95,6 +100,21 @@ func MeetingURLFromEvent(event *calendar.Event) (*url.URL, bool) {
 		return nil, false
 	}
 	return parsedURL, true
+}
+
+// conferenceVideoEntryPointURL returns the URL for the video entrypoint if one exists.
+func conferenceVideoEntryPointURL(event *calendar.Event) (string, bool) {
+	if event.ConferenceData == nil {
+		return "", false
+	}
+
+	for _, entryPoint := range event.ConferenceData.EntryPoints {
+		if entryPoint.EntryPointType == "video" && strings.Contains(entryPoint.Uri, "zoom") {
+			return entryPoint.Uri, true
+		}
+	}
+
+	return "", false
 }
 
 // IsMeetingSoon returns true if the meeting is less than 5 minutes from now.
