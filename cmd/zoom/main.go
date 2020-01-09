@@ -24,8 +24,8 @@ import (
 	"github.com/skratchdot/open-golang/open"
 	"google.golang.org/api/calendar/v3"
 
-	"github.com/benbalter/zoom-go"
-	"github.com/benbalter/zoom-go/config"
+	"github.com/cmaahs/zoom-go"
+	"github.com/cmaahs/zoom-go/config"
 )
 
 func printSetupInstructions() {

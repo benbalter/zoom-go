@@ -17,7 +17,8 @@ import (
 
 const googleCalendarDateTimeFormat = time.RFC3339
 
-var zoomURLRegexp = regexp.MustCompile(`https://.*?\.zoom\.us/(?:j/(\d+)|my/(\S+))`)
+var zoomURLRegexp = regexp.MustCompile(`https://.*?zoom\.us/(?:j/(\d+)|my/(\S+))`)
+var zoomURLRegexpPwd = regexp.MustCompile(`https://.*?zoom\.us/j/.*pwd=(.*)`)
 
 // NextEvents returns the next N calendar events in your primary calendar.
 // It only returns events which contain Zoom video chats.
@@ -82,8 +83,12 @@ func MeetingURLFromEvent(event *calendar.Event) (*url.URL, bool) {
 
 	matches := zoomURLRegexp.FindAllStringSubmatch(input, -1)
 	if len(matches) == 0 || len(matches[0]) == 0 {
+                fmt.Println("No matches...")
 		return nil, false
 	}
+
+	haspass := zoomURLRegexpPwd.FindAllStringSubmatch(event.Description, -1)
+
 
 	// By default, match the whole URL.
 	stringURL := matches[0][0]
@@ -91,10 +96,19 @@ func MeetingURLFromEvent(event *calendar.Event) (*url.URL, bool) {
 	// If we have a meeting ID in the URL, then use zoommtg:// instead of the HTTPS URL.
 	if len(matches[0]) >= 2 {
 		if _, err := strconv.Atoi(matches[0][1]); err == nil {
-			stringURL = "zoommtg://zoom.us/join?confno=" + matches[0][1]
+			if len(haspass) >= 1 {
+				if len(haspass[0]) >= 2 {
+					stringURL = "zoommtg://zoom.us/join?confno=" + matches[0][1] + "&pwd=" + haspass[0][1]
+				} else {
+					stringURL = "zoommtg://zoom.us/join?confno=" + matches[0][1]
+				}
+			} else {
+				stringURL = "zoommtg://zoom.us/join?confno=" + matches[0][1]
+			}
 		}
 	}
 
+        fmt.Println(stringURL)
 	parsedURL, err := url.Parse(stringURL)
 	if err != nil {
 		return nil, false
