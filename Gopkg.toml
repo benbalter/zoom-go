@@ -41,6 +41,10 @@
   branch = "master"
   name = "google.golang.org/api"
 
+[[constraint]]
+  version = "v2.1.0"
+  name = "github.com/mvdan/xurls"
+
 [prune]
   go-tests = true
   unused-packages = true

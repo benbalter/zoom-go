@@ -34,6 +34,14 @@
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:abadfc1280a8354027af9b2916c4b303bfe3480fea2ed8cb2928e7288acdd46f"
+  name = "github.com/mvdan/xurls"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "aca318f079078cc3677a81e7f7d89df859f4f4b2"
+  version = "v2.1.0"
+
+[[projects]]
   digest = "1:40e195917a951a8bf867cd05de2a46aaf1806c50cf92eebf4c16f78cd196f747"
   name = "github.com/pkg/errors"
   packages = ["."]
@@ -130,6 +138,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/dustin/go-humanize",
+    "github.com/mvdan/xurls",
     "github.com/pkg/errors",
     "github.com/skratchdot/open-golang/open",
     "github.com/stretchr/testify/assert",

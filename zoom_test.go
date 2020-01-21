@@ -121,7 +121,7 @@ func TestNextEvents(t *testing.T) {
 			assert.Equal(t, query.Get("showDeleted"), "false")
 			assert.Equal(t, query.Get("singleEvents"), "true")
 			assert.Equal(t, query.Get("timeMin"), time.Now().Add(-5*time.Minute).Format(time.RFC3339))
-			fmt.Fprintf(w, testEventResponse)
+			fmt.Fprint(w, testEventResponse)
 		} else {
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL)
 		}
@@ -155,7 +155,7 @@ func TestNextEvent(t *testing.T) {
 			assert.Equal(t, query.Get("showDeleted"), "false")
 			assert.Equal(t, query.Get("singleEvents"), "true")
 			assert.Equal(t, query.Get("timeMin"), time.Now().Add(-5*time.Minute).Format(time.RFC3339))
-			fmt.Fprintf(w, testEventResponse)
+			fmt.Fprint(w, testEventResponse)
 		} else {
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL)
 		}
