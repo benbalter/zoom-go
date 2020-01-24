@@ -211,6 +211,22 @@ func TestNextEvent_NoUpcomingEvents(t *testing.T) {
 	assert.Nil(t, event)
 }
 
+func TestNextEventByStartTime(t *testing.T) {
+	assert.Nil(t, NextEventByStartTime([]*calendar.Event{}))
+
+	events := []*calendar.Event{
+		// Starts 30 minutes ago.
+		{Id: "30 mins ago", Start: &calendar.EventDateTime{DateTime: time.Now().Add(-30 * time.Minute).Format(time.RFC3339)}},
+		// Starts 5 minutes from now.
+		{Id: "5 mins from now", Start: &calendar.EventDateTime{DateTime: time.Now().Add(5 * time.Minute).Format(time.RFC3339)}},
+		// Starts in 25 minutes.
+		{Id: "25 mins from now", Start: &calendar.EventDateTime{DateTime: time.Now().Add(25 * time.Minute).Format(time.RFC3339)}},
+	}
+
+	nextEventByStartTime := NextEventByStartTime(events)
+	assert.Equal(t, nextEventByStartTime.Id, "5 mins from now")
+}
+
 func newFakeGoogleCalendarService(t *testing.T, mux http.Handler) (*calendar.Service, func()) {
 	service, err := calendar.New(&http.Client{})
 	if err != nil {

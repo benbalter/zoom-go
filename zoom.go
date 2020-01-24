@@ -4,6 +4,7 @@ package zoom
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"net/url"
 	"strings"
 	"time"
@@ -56,6 +57,37 @@ func NextEvents(service *calendar.Service, count int) ([]*calendar.Event, error)
 	return zoomEvents, nil
 }
 
+// NextEventByStartTime takes an array of events and finds the one whose start time is closest to now.
+func NextEventByStartTime(events []*calendar.Event) *calendar.Event {
+	if len(events) == 0 {
+		return nil
+	}
+	if len(events) == 1 {
+		return events[0]
+	}
+
+	// Sort based on how far away the start time is from now. For example,
+	// a start time 5 minutes in the future (300s away) will be chosen instead
+	// of one 30 minutes (1800s away) in the past.
+	//
+	// This is helpful when you have two events that overlap or are back-to-back.
+	var closestEvent *calendar.Event
+	var closestEventStartTimeDistance time.Duration = 1<<63 - 1 // start with the max duration so we always get an event
+	now := time.Now()
+	for _, event := range events {
+		t, _ := time.Parse(time.RFC3339, event.Start.DateTime)
+		distanceFromNow := now.Sub(t)
+		if distanceFromNow < 0 {
+			distanceFromNow = distanceFromNow * -1 // absolute value
+		}
+		if distanceFromNow < closestEventStartTimeDistance {
+			closestEvent = event
+			closestEventStartTimeDistance = distanceFromNow
+		}
+	}
+	return closestEvent
+}
+
 // NextEvent returns the next calendar event in your primary calendar.
 // It will list at most 5 events, and select the first one with a Zoom URL if one exists.
 func NextEvent(service *calendar.Service) (*calendar.Event, error) {
@@ -66,6 +98,7 @@ func NextEvent(service *calendar.Service) (*calendar.Event, error) {
 	if len(events) == 0 {
 		return nil, nil
 	}
+	log.Println(events)
 	return events[0], nil
 }
 

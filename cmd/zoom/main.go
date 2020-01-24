@@ -113,7 +113,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	meetings, err := zoom.NextEvents(calendar, *count)
+	meetings, err := zoom.NextEvents(calendar, (*count)*5)
 	if err != nil {
 		fmt.Printf("error fetching next meetings: %+v\n", err)
 		os.Exit(1)
@@ -124,16 +124,31 @@ func main() {
 		return
 	}
 
+	closestMeeting := zoom.NextEventByStartTime(meetings)
+	haveSeenClosestMeeting := false
+	printedMeetings := 0
 	for _, meeting := range meetings {
+		// Don't print older meetings.
+		if !haveSeenClosestMeeting {
+			haveSeenClosestMeeting = closestMeeting.Id == meeting.Id
+		}
+		if closestMeeting.Id != meeting.Id && !haveSeenClosestMeeting {
+			continue
+		}
+
+		// Print closest meeting and beyond.
 		printMeeting(meeting)
+		printedMeetings += 1
 		if *count > 1 {
 			fmt.Println("_____________________________________________________")
 		}
+		if printedMeetings == *count {
+			break
+		}
 	}
 
-	firstMeeting := meetings[0]
-	if zoom.IsMeetingSoon(firstMeeting) {
-		url, ok := zoom.MeetingURLFromEvent(firstMeeting)
+	if zoom.IsMeetingSoon(closestMeeting) {
+		url, ok := zoom.MeetingURLFromEvent(closestMeeting)
 		if !ok {
 			fmt.Println("No Zoom URL found in the meeting.")
 			os.Exit(1)
