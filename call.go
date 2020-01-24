@@ -5,7 +5,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/mvdan/xurls"
+	"mvdan.cc/xurls/v2"
 )
 
 var urlRegexp = xurls.Strict()
