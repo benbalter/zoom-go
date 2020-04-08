@@ -38,7 +38,7 @@ func extractZoomCallURL(input string) (*url.URL, bool) {
 		if err != nil {
 			continue
 		}
-		if strings.HasSuffix(u.Hostname(), ".zoom.us") {
+		if strings.HasSuffix(u.Hostname(), ".zoom.us") || u.Hostname() == "zoom.us" {
 			return u, true
 		}
 	}
