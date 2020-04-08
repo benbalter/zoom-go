@@ -33,6 +33,12 @@ func NewFileProvider() (*FileProvider, error) {
 	}, nil
 }
 
+// ensureDirectoryExists ensures the configured configuration directory exists on disk
+// otherwise it creates it.
+func (f *FileProvider) ensureDirectoryExists() error {
+	return os.MkdirAll(f.directory, 0700)
+}
+
 // GoogleClientConfigExists returns true if the config is readable and valid, false otherwise.
 func (f *FileProvider) GoogleClientConfigExists() bool {
 	conf, err := f.GoogleClientConfig()
@@ -74,6 +80,11 @@ func (f *FileProvider) GoogleClientConfig() (*oauth2.Config, error) {
 func (f *FileProvider) StoreGoogleClientConfig(conf *oauth2.Config) error {
 	f.cachedGoogleClientConfig = conf
 
+	err := f.ensureDirectoryExists()
+	if err != nil {
+		return errors.WithStack(err)
+	}
+
 	fd, err := os.Create(filepath.Join(f.directory, googleClientConfigFilename))
 	if err != nil {
 		return errors.WithStack(err)
@@ -112,6 +123,11 @@ func (f *FileProvider) GoogleToken() (*oauth2.Token, error) {
 // StoreGoogleToken writes the Google token to the configuration file.
 func (f *FileProvider) StoreGoogleToken(token *oauth2.Token) error {
 	f.cachedGoogleToken = token
+
+	err := f.ensureDirectoryExists()
+	if err != nil {
+		return errors.WithStack(err)
+	}
 
 	fd, err := os.Create(filepath.Join(f.directory, googleTokenFilename))
 	if err != nil {
