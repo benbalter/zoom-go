@@ -13,6 +13,14 @@ func TestExtractZoomCallData(t *testing.T) {
 	}{
 		{"https://github.com", call{}},
 		{
+			"\n\n\nConference: https://zoom.us/j/9851224\n\n",
+			call{id: "9851224", originalURL: "https://zoom.us/j/9851224"},
+		},
+		{
+			"\n\n\nConference: https://usweb04.zoom.us/j/2315\n\n",
+			call{id: "2315", originalURL: "https://usweb04.zoom.us/j/2315"},
+		},
+		{
 			"\n\n\nConference: https://jithub.zoom.us/j/12345\n\n",
 			call{id: "12345", originalURL: "https://jithub.zoom.us/j/12345"},
 		},
