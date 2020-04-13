@@ -124,6 +124,8 @@ func main() {
 		return
 	}
 
+	meetings = zoom.OnlyUpcomingEvents(meetings)
+
 	for _, meeting := range meetings {
 		printMeeting(meeting)
 		if *count > 1 {

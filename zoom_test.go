@@ -137,78 +137,36 @@ func TestNextEvents(t *testing.T) {
 	assert.Equal(t, "URI in the conference data entry points", events[2].Summary)
 }
 
-func TestNextEvent(t *testing.T) {
-	mux := http.NewServeMux()
+func TestNextEventByStartTime(t *testing.T) {
+	assert.Nil(t, NextEventByStartTime([]*calendar.Event{}))
 
-	service, shutdown := newFakeGoogleCalendarService(t, mux)
-	defer shutdown()
+	events := []*calendar.Event{
+		// Starts 30 minutes ago.
+		{Id: "30 mins ago", Start: &calendar.EventDateTime{DateTime: time.Now().Add(-30 * time.Minute).Format(time.RFC3339)}},
+		// Starts 5 minutes from now.
+		{Id: "5 mins from now", Start: &calendar.EventDateTime{DateTime: time.Now().Add(5 * time.Minute).Format(time.RFC3339)}},
+		// Starts in 25 minutes.
+		{Id: "25 mins from now", Start: &calendar.EventDateTime{DateTime: time.Now().Add(25 * time.Minute).Format(time.RFC3339)}},
+	}
 
-	actualRequests := 0
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		actualRequests++
-
-		if r.URL.Path == "/calendars/primary/events" {
-			query := r.URL.Query()
-			assert.Equal(t, query.Get("alt"), "json")
-			assert.Equal(t, query.Get("maxResults"), "10")
-			assert.Equal(t, query.Get("orderBy"), "startTime")
-			assert.Equal(t, query.Get("showDeleted"), "false")
-			assert.Equal(t, query.Get("singleEvents"), "true")
-			assert.Equal(t, query.Get("timeMin"), time.Now().Add(-5*time.Minute).Format(time.RFC3339))
-			fmt.Fprint(w, testEventResponse)
-		} else {
-			t.Fatalf("unexpected request: %s %s", r.Method, r.URL)
-		}
-	})
-
-	event, err := NextEvent(service)
-	require.NoError(t, err)
-	require.NotNil(t, event)
-	assert.Equal(t, 1, actualRequests)
-
-	assert.Equal(t, &calendar.Event{
-		Created: "2018-10-09T17:00:00-07:00",
-		Creator: &calendar.EventCreator{
-			DisplayName: "Parker Moore",
-			Email:       "parkr@jithub.com",
-		},
-		Description: "I am a description for the video call",
-		HtmlLink:    "lalala",
-		Kind:        "calendar#event",
-		Location:    "https://jithub.zoom.us/j/12345",
-		Organizer: &calendar.EventOrganizer{
-			DisplayName: "Kevin Jithub",
-			Email:       "kevin@jithub.com",
-		},
-		Start: &calendar.EventDateTime{
-			DateTime: "2018-10-10T17:30:00-07:00",
-			TimeZone: "America/New_York",
-		},
-		Summary: "URI in the location",
-	}, event)
+	nextEventByStartTime := NextEventByStartTime(events)
+	assert.Equal(t, nextEventByStartTime.Id, "5 mins from now")
 }
 
-func TestNextEvent_NoUpcomingEvents(t *testing.T) {
-	mux := http.NewServeMux()
+func TestOnlyUpcomingEvents(t *testing.T) {
+	assert.Empty(t, OnlyUpcomingEvents([]*calendar.Event{}))
 
-	service, shutdown := newFakeGoogleCalendarService(t, mux)
-	defer shutdown()
+	events := []*calendar.Event{
+		// Starts 30 minutes ago.
+		{Id: "30 mins ago", Start: &calendar.EventDateTime{DateTime: time.Now().Add(-30 * time.Minute).Format(time.RFC3339)}},
+		// Starts 5 minutes from now.
+		{Id: "5 mins from now", Start: &calendar.EventDateTime{DateTime: time.Now().Add(5 * time.Minute).Format(time.RFC3339)}},
+		// Starts in 25 minutes.
+		{Id: "25 mins from now", Start: &calendar.EventDateTime{DateTime: time.Now().Add(25 * time.Minute).Format(time.RFC3339)}},
+	}
 
-	actualRequests := 0
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		actualRequests++
-
-		if r.URL.Path == "/calendars/primary/events" {
-			fmt.Fprintf(w, `{"items":[]}`)
-		} else {
-			t.Fatalf("unexpected request: %s %s", r.Method, r.URL)
-		}
-	})
-
-	event, err := NextEvent(service)
-	require.NoError(t, err)
-	assert.Equal(t, 1, actualRequests)
-	assert.Nil(t, event)
+	actual := OnlyUpcomingEvents(events)
+	assert.Equal(t, events[1:3], actual)
 }
 
 func newFakeGoogleCalendarService(t *testing.T, mux http.Handler) (*calendar.Service, func()) {
