@@ -15,10 +15,10 @@ $ cp zoom ~/bin
 If you want to live on the edge and run the latest master instead, [install Go](https://golang.org/doc/install) ([also on homebrew](https://formulae.brew.sh/formula/go)), then run:
 
 ```bash
-$ go get github.com/benbalter/zoom-go/cmd/zoom
+$ go install github.com/benbalter/zoom-go/cmd/zoom@master
 ```
 
-This will install a `zoom` executable file into `$GOPATH/bin/zoom`.
+This will install a `zoom` executable file into `$(go env GOPATH)/bin` (or `$GOBIN`, if set).
 
 ## Usage
 

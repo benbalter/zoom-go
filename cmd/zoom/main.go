@@ -1,7 +1,7 @@
 // Command zoom prints your next Google Calendar event and opens Zoom if the meeting is a zoom meeting.
 //
 // To install, run:
-//     go install github.com/benbalter/zoom-go/cmd/zoom
+//     go install github.com/benbalter/zoom-go/cmd/zoom@master
 //
 // To use, run:
 //     zoom
